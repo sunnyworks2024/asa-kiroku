@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="あさの記録">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>あさの記録</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column, input first, then this week, then the weight line, then history */
+:root{
+  --bg:#ffffff; --fg:#3a3a3a; --muted:#7c8079; --line:#e6e9e3; --soft:#f4f8f1;
+  --accent:#80CE60; --accent-ink:#3f7d26; --warn:#c9822b;
+  --font-ui:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --font-num:"Inter","Zen Kaku Gothic New",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1c1e1b; --fg:#e8eae5; --muted:#9a9f96; --line:#33372f; --soft:#252a22;
+  --accent:#80CE60; --accent-ink:#a5e08a; --warn:#e0a85c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1c1e1b; --fg:#e8eae5; --muted:#9a9f96; --line:#33372f; --soft:#252a22;
+  --accent:#80CE60; --accent-ink:#a5e08a; --warn:#e0a85c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:15px;line-height:1.7;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:460px;margin:0 auto;padding-block:20px 48px;display:flex;flex-direction:column;gap:28px}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-weight:700;font-size:13px;letter-spacing:.08em;color:var(--muted)}
+.datebar{display:flex;align-items:center;gap:6px}
+.datebar button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--fg);font-size:16px;cursor:pointer}
+.datebar .d{font-weight:700;font-size:20px;min-width:7.5em;text-align:center}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.form{display:flex;flex-direction:column;gap:22px}
+.field{display:flex;flex-direction:column;gap:8px}
+.label{font-size:13px;font-weight:500;color:var(--muted);letter-spacing:.04em}
+.weight{display:flex;align-items:center;gap:10px}
+.weight input{flex:1;min-width:0;font-family:var(--font-num);font-size:34px;font-weight:600;text-align:center;
+  border:none;border-bottom:2px solid var(--line);background:transparent;color:var(--fg);padding:4px 0}
+.weight input:focus{border-bottom-color:var(--accent);outline:none}
+.step{width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--soft);color:var(--fg);font-size:20px;cursor:pointer}
+.unit{color:var(--muted);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:8px 16px;font-size:15px;cursor:pointer;font-family:inherit}
+.chip.num{font-family:var(--font-num)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#1f3a12;font-weight:700}
+.km{display:flex;align-items:center;gap:8px}
+.km input{width:5.5em;font-family:var(--font-num);font-size:18px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+.hint{font-size:12px;color:var(--muted)}
+.save{width:100%;border:none;border-radius:14px;background:var(--accent);color:#1f3a12;font-weight:700;font-size:17px;padding:15px;cursor:pointer;font-family:inherit}
+.save:active{transform:translateY(1px)}
+.msg{background:var(--soft);border-radius:14px;padding:16px 18px;font-size:15px;line-height:1.9}
+.msg p{margin:0}
+.msg p+p{margin-top:6px}
+h2{font-size:14px;font-weight:700;margin:0 0 10px;letter-spacing:.04em}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{border-top:2px solid var(--line);padding-top:8px}
+.stat .v{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:24px;font-weight:600;line-height:1.2}
+.stat .v small{font-size:12px;font-weight:400;color:var(--muted);margin-left:2px}
+.stat .k{font-size:12px;color:var(--muted)}
+.stat.good{border-top-color:var(--accent)} .stat.over{border-top-color:var(--warn)}
+.chart svg{width:100%;height:auto;display:block}
+.empty{color:var(--muted);font-size:14px;padding:18px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-weight:500;color:var(--muted);font-size:12px;text-align:right;padding:4px 6px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums}
+td.zero{color:var(--accent-ink);font-weight:600}
+tr.rowbtn{cursor:pointer}
+details{border-top:1px solid var(--line);padding-top:14px}
+summary{cursor:pointer;font-size:13px;color:var(--muted)}
+.data{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.data textarea{width:100%;min-height:90px;font-family:var(--font-num);font-size:12px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg);color:var(--fg)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.ghost{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:10px;padding:8px 14px;cursor:pointer;font-family:inherit;font-size:14px}
+.toast{font-size:13px;color:var(--accent-ink);min-height:1.2em}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+.ver{font-size:11px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div class="brand">あさの記録</div>
+    <div class="datebar">
+      <button id="prev" aria-label="前の日">‹</button>
+      <div class="d" id="dateLabel"></div>
+      <button id="next" aria-label="次の日">›</button>
+    </div>
+  </header>
+
+  <form class="form" id="form">
+    <div class="field">
+      <span class="label">起きてすぐの体重</span>
+      <div class="weight">
+        <button type="button" class="step" id="wMinus" aria-label="0.1kg減らす">−</button>
+        <input id="w" type="number" inputmode="decimal" step="0.1" min="30" max="150" placeholder="--.-">
+        <button type="button" class="step" id="wPlus" aria-label="0.1kg増やす">＋</button>
+        <span class="unit">kg</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="label">ラン</span>
+      <div class="chips" id="runChips">
+        <button type="button" class="chip" data-run="0">走らなかった</button>
+        <button type="button" class="chip num" data-km="5">5km</button>
+        <button type="button" class="chip num" data-km="8">8km</button>
+        <button type="button" class="chip num" data-km="10">10km</button>
+      </div>
+      <div class="km"><input id="km" type="number" inputmode="decimal" step="0.1" min="0" max="100" placeholder="0.0"><span class="unit">km（ほかの距離はここに）</span></div>
+    </div>
+
+    <div class="field">
+      <span class="label">昨夜のお酒（水割り）</span>
+      <div class="chips" id="drinkChips">
+        <button type="button" class="chip num" data-d="0">0杯</button>
+        <button type="button" class="chip num" data-d="1">1杯</button>
+        <button type="button" class="chip num" data-d="2">2杯</button>
+        <button type="button" class="chip num" data-d="3">3杯</button>
+        <button type="button" class="chip num" data-d="4">4杯〜</button>
+      </div>
+      <span class="hint">水割り1杯（ウイスキー30ml）で純アルコール約10gとして数えています</span>
+    </div>
+
+    <button type="submit" class="save" id="save">記録する</button>
+  </form>
+
+  <div class="msg" id="msg"></div>
+
+  <section>
+    <h2>この7日間</h2>
+    <div class="stats">
+      <div class="stat" id="sDry"><div class="v num" id="vDry">-</div><div class="k">休肝日（目標 週2日）</div></div>
+      <div class="stat" id="sKm"><div class="v num" id="vKm">-</div><div class="k">走った距離</div></div>
+      <div class="stat" id="sAlc"><div class="v num" id="vAlc">-</div><div class="k">純アルコール（1日平均）</div></div>
+    </div>
+  </section>
+
+  <section class="chart">
+    <h2>体重の流れ（30日）</h2>
+    <div id="chart"></div>
+  </section>
+
+  <section>
+    <h2>これまでの記録</h2>
+    <div id="hist"></div>
+  </section>
+
+  <details>
+    <summary>データの書き出し・読み込み</summary>
+    <div class="data">
+      <span class="hint">機種変更やアプリの引っ越しのときに使います。書き出した文字をコピーして、新しい方の「読み込む」に貼りつけてください。</span>
+      <div class="row">
+        <button type="button" class="ghost" id="exportBtn">書き出す</button>
+        <button type="button" class="ghost" id="importBtn">読み込む</button>
+      </div>
+      <textarea id="dataBox" aria-label="記録データ"></textarea>
+      <div class="toast" id="dataToast"></div>
+    </div>
+  </details>
+  <div class="ver">v1 ・ 2026-11-11</div>
+</div>
+
+<script>
+(function(){
+  const KEY = 'asa-kiroku-v1';
+  const GRAM_PER_DRINK = 10; // 30ml × 40% × 0.8
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2,'0');
+  const iso = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const parse = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+  const addDays = (s,n) => { const d=parse(s); d.setDate(d.getDate()+n); return iso(d); };
+  const WD = ['日','月','火','水','木','金','土'];
+  const label = s => { const d=parse(s); return (d.getMonth()+1)+'/'+d.getDate()+'（'+WD[d.getDay()]+'）'; };
+
+  let data = {};
+  try { data = JSON.parse(localStorage.getItem(KEY)||'{}')||{}; } catch(e){ data = {}; }
+  const store = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); return true; } catch(e){ return false; } };
+
+  const today = iso(new Date());
+  let cur = today;
+  let drinks = null, runKm = null;
+
+  function latestWeightBefore(s){
+    const keys = Object.keys(data).filter(k=>k<s && data[k].w).sort();
+    return keys.length ? data[keys[keys.length-1]].w : null;
+  }
+
+  function setChips(){
+    document.querySelectorAll('#drinkChips .chip').forEach(b=>b.setAttribute('aria-pressed', String(drinks!==null && Number(b.dataset.d)===drinks)));
+    document.querySelectorAll('#runChips .chip').forEach(b=>{
+      const on = b.dataset.run==='0' ? runKm===0 : (runKm!==null && Number(b.dataset.km)===runKm);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+
+  function loadForm(){
+    $('dateLabel').textContent = cur===today ? '今日 '+label(cur).replace(/（.）/,'') : label(cur);
+    $('next').disabled = cur>=today;
+    const e = data[cur];
+    if(e){
+      $('w').value = e.w ?? '';
+      runKm = e.km ?? null; drinks = e.d ?? null;
+      $('km').value = runKm ? runKm : '';
+      $('save').textContent = 'この日の記録を直す';
+    } else {
+      const lw = latestWeightBefore(cur);
+      $('w').value = lw ?? '';
+      runKm = null; drinks = null; $('km').value = '';
+      $('save').textContent = '記録する';
+    }
+    setChips();
+  }
+
+  // --- messages (rule-based, in Sano's voice) ---
+  function messages(s){
+    const e = data[s]; if(!e) return null;
+    const out = [];
+    const prev = data[addDays(s,-1)];
+    if(e.d===0) out.push('休肝日、ちゃんとつくれましたね。昨夜はいつもより深く眠れたんじゃないでしょうか。');
+    else if(prev && prev.d!=null && e.d < prev.d) out.push('昨日より少なめです。その一杯の差が、来月のお腹にちゃんと効いてきます。');
+    else if(e.d>=3) out.push('飲んだ日も、こうして記録できたのが大事です。今夜は2杯までにしてみませんか。');
+    else if(e.d!=null) out.push(e.d+'杯でおさえられていますね。良い流れです。');
+    if(e.km>=10) out.push(e.km+'km、おつかれさまです。脚が重い日はゆっくり休んでくださいね。');
+    else if(e.km>0) out.push('今日も走りましたね。毎日続けていることが、いちばんの力です。');
+    else if(e.km===0) out.push('走らない日も大事な日です。体を休めるのも練習のうちですよ。');
+    const ws = Object.keys(data).filter(k=>k<=s && data[k].w).sort().slice(-14);
+    if(ws.length>=8){
+      const a = avg(ws.slice(0,7).map(k=>data[k].w)), b = avg(ws.slice(-7).map(k=>data[k].w));
+      if(b < a-0.2) out.push('体重がゆるやかに下がってきています。この調子で良いと思います。');
+    }
+    let st=0, k=s; while(data[k]){ st++; k=addDays(k,-1); }
+    if(st>=3) out.push('記録は'+st+'日続いています。');
+    return out;
+  }
+  const avg = a => a.reduce((x,y)=>x+y,0)/a.length;
+
+  function renderMsg(s){
+    const m = messages(s);
+    const box = $('msg');
+    box.innerHTML = '';
+    const lines = m && m.length ? m : ['毎朝、体重とランと昨夜のお酒を入れるだけです。<br>数字が並んでいくと、体の変化が見えてきます。'];
+    lines.forEach(t=>{ const p=document.createElement('p'); p.innerHTML=t; box.appendChild(p); });
+  }
+
+  function renderStats(){
+    const days = []; for(let i=6;i>=0;i--) days.push(addDays(today,-i));
+    const rec = days.map(k=>data[k]).filter(Boolean);
+    const dRec = rec.filter(e=>e.d!=null);
+    const dry = dRec.filter(e=>e.d===0).length;
+    const km = rec.reduce((s,e)=>s+(e.km||0),0);
+    $('vDry').innerHTML = rec.length ? dry+'<small>日</small>' : '-';
+    $('vKm').innerHTML = rec.length ? (Math.round(km*10)/10)+'<small>km</small>' : '-';
+    let g = null;
+    if(dRec.length){ g = Math.round(dRec.reduce((s,e)=>s+Math.min(e.d,4)*GRAM_PER_DRINK,0)/dRec.length); }
+    $('vAlc').innerHTML = g===null ? '-' : g+'<small>g</small>';
+    $('sDry').className = 'stat'+(rec.length && dry>=2 ? ' good':'');
+    $('sAlc').className = 'stat'+(g===null?'': g<=20?' good': g>=40?' over':'');
+  }
+
+  function renderChart(){
+    const days=[]; for(let i=29;i>=0;i--) days.push(addDays(today,-i));
+    const pts = days.map((k,i)=>({i,k,w:data[k]&&data[k].w})).filter(p=>p.w);
+    const box=$('chart');
+    if(pts.length<2){ box.innerHTML='<div class="empty">2日分記録すると、ここに体重の線が出ます。</div>'; return; }
+    const W=440,H=180,L=36,R=12,T=14,B=26;
+    let lo=Math.min(...pts.map(p=>p.w)), hi=Math.max(...pts.map(p=>p.w));
+    lo=Math.floor(lo-0.5); hi=Math.ceil(hi+0.5); if(hi-lo<2) hi=lo+2;
+    const x=i=>L+(W-L-R)*i/29, y=w=>T+(H-T-B)*(hi-w)/(hi-lo);
+    const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const fg=css('--muted'), line=css('--line'), ac=css('--accent'), ink=css('--fg');
+    let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="30日間の体重">';
+    const ticks=[lo,(lo+hi)/2,hi];
+    ticks.forEach(t=>{ s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(t)+'" y2="'+y(t)+'" stroke="'+line+'" stroke-width="1"/>';
+      s+='<text x="'+(L-6)+'" y="'+(y(t)+4)+'" text-anchor="end" font-size="11" fill="'+fg+'" font-family="Inter,sans-serif">'+t.toFixed(1)+'</text>'; });
+    [0,14,29].forEach(i=>{ const d=parse(days[i]); s+='<text x="'+x(i)+'" y="'+(H-6)+'" text-anchor="'+(i===0?'start':i===29?'end':'middle')+'" font-size="11" fill="'+fg+'" font-family="Inter,sans-serif">'+(d.getMonth()+1)+'/'+d.getDate()+'</text>'; });
+    const path=pts.map((p,j)=>(j?'L':'M')+x(p.i).toFixed(1)+' '+y(p.w).toFixed(1)).join(' ');
+    const area=path+' L'+x(pts[pts.length-1].i).toFixed(1)+' '+(H-B)+' L'+x(pts[0].i).toFixed(1)+' '+(H-B)+' Z';
+    s+='<path d="'+area+'" fill="'+ac+'" fill-opacity="0.12" stroke="none"/>';
+    s+='<path d="'+path+'" fill="none" stroke="'+ac+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    pts.forEach(p=>{ s+='<circle cx="'+x(p.i)+'" cy="'+y(p.w)+'" r="2.5" fill="'+ac+'"/>'; });
+    const last=pts[pts.length-1];
+    s+='<circle cx="'+x(last.i)+'" cy="'+y(last.w)+'" r="5" fill="'+ac+'" stroke="'+css('--bg')+'" stroke-width="2"/>';
+    s+='<text x="'+Math.min(x(last.i),W-R-4)+'" y="'+(y(last.w)-10)+'" text-anchor="end" font-size="12" font-weight="600" fill="'+ink+'" font-family="Inter,sans-serif">'+last.w.toFixed(1)+'kg</text>';
+    s+='</svg>';
+    box.innerHTML=s;
+  }
+
+  function renderHist(){
+    const keys=Object.keys(data).sort().reverse().slice(0,21);
+    const box=$('hist');
+    if(!keys.length){ box.innerHTML='<div class="empty">まだ記録がありません。上から今日の分を入れてみてください。</div>'; return; }
+    let h='<table><thead><tr><th>日付</th><th>体重</th><th>ラン</th><th>昨夜のお酒</th></tr></thead><tbody>';
+    keys.forEach(k=>{ const e=data[k];
+      h+='<tr class="rowbtn" data-k="'+k+'"><td>'+label(k)+'</td><td>'+(e.w?e.w.toFixed(1):'-')+'</td><td>'+(e.km==null?'-':e.km===0?'休み':e.km+'km')+'</td>'+
+        '<td class="'+(e.d===0?'zero':'')+'">'+(e.d==null?'-':e.d===0?'休肝日':(e.d>=4?'4杯〜':e.d+'杯'))+'</td></tr>'; });
+    h+='</tbody></table>';
+    box.innerHTML=h;
+    box.querySelectorAll('tr.rowbtn').forEach(tr=>tr.addEventListener('click',()=>{ cur=tr.dataset.k; loadForm(); renderMsg(cur); window.scrollTo({top:0,behavior:'smooth'}); }));
+  }
+
+  function renderAll(){ renderMsg(cur); renderStats(); renderChart(); renderHist(); }
+
+  // --- events ---
+  $('prev').onclick=()=>{ cur=addDays(cur,-1); loadForm(); renderMsg(cur); };
+  $('next').onclick=()=>{ if(cur<today){ cur=addDays(cur,1); loadForm(); renderMsg(cur); } };
+  const bump=d=>{ const v=parseFloat($('w').value)||latestWeightBefore(cur)||65; $('w').value=(Math.round((v+d)*10)/10).toFixed(1); };
+  $('wMinus').onclick=()=>bump(-0.1); $('wPlus').onclick=()=>bump(0.1);
+  document.querySelectorAll('#drinkChips .chip').forEach(b=>b.onclick=()=>{ drinks=Number(b.dataset.d); setChips(); });
+  document.querySelectorAll('#runChips .chip').forEach(b=>b.onclick=()=>{
+    runKm = b.dataset.run==='0' ? 0 : Number(b.dataset.km); $('km').value = runKm||''; setChips(); });
+  $('km').oninput=()=>{ const v=parseFloat($('km').value); runKm = isNaN(v)?null:v; setChips(); };
+
+  $('form').addEventListener('submit',ev=>{
+    ev.preventDefault();
+    const w=parseFloat($('w').value);
+    const e={};
+    if(!isNaN(w)) e.w=Math.round(w*10)/10;
+    if(runKm!==null) e.km=runKm;
+    if(drinks!==null) e.d=drinks;
+    if(!Object.keys(e).length){ $('msg').innerHTML='<p>体重・ラン・お酒のどれかを入れてから押してください。</p>'; return; }
+    data[cur]=e;
+    const ok=store();
+    $('save').textContent='この日の記録を直す';
+    renderAll();
+    if(!ok){ const p=document.createElement('p'); p.textContent='この画面では保存できませんでした。ブラウザのプライベートモードを切ってから開き直してください。'; $('msg').appendChild(p); }
+  });
+
+  $('exportBtn').onclick=()=>{
+    const t=JSON.stringify(data); $('dataBox').value=t;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(()=>{$('dataToast').textContent='コピーしました';},()=>{ $('dataBox').select(); $('dataToast').textContent='文字を選んだので、長押しでコピーしてください'; });
+    } else { $('dataBox').select(); $('dataToast').textContent='文字を選んだので、長押しでコピーしてください'; }
+  };
+  $('importBtn').onclick=()=>{
+    try{
+      const obj=JSON.parse($('dataBox').value);
+      if(typeof obj!=='object'||Array.isArray(obj)) throw 0;
+      let n=0; Object.keys(obj).forEach(k=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(k)){ data[k]=obj[k]; n++; } });
+      store(); loadForm(); renderAll();
+      $('dataToast').textContent=n+'日分を読み込みました';
+    }catch(e){ $('dataToast').textContent='読み込めませんでした。書き出した文字をそのまま貼りつけてください'; }
+  };
+
+  loadForm(); renderAll();
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+</script>
+</body>
+</html>
