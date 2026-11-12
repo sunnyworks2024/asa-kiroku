@@ -102,7 +102,7 @@ body{margin:0;-webkit-text-size-adjust:100%}
     </div>
   </header>
 
-  <form class="form" id="form">
+  <form class="form" id="form" novalidate>
     <div class="field">
       <span class="label">起きてすぐの体重</span>
       <div class="weight">
@@ -137,10 +137,24 @@ body{margin:0;-webkit-text-size-adjust:100%}
       <span class="hint">水割り1杯（ウイスキー30ml）で純アルコール約10gとして数えています</span>
     </div>
 
+    <div class="field">
+      <span class="label">お腹まわり（週1回・日曜の朝）</span>
+      <div class="km"><input id="waist" type="number" inputmode="decimal" step="0.5" min="50" max="150" placeholder="--.-"><span class="unit">cm（おへその高さで、息を軽くはいたとき）</span></div>
+    </div>
+
     <button type="submit" class="save" id="save">記録する</button>
   </form>
 
   <div class="msg" id="msg"></div>
+
+  <section>
+    <h2>目標 62kg台</h2>
+    <div class="stats">
+      <div class="stat" id="sAvg"><div class="v num" id="vAvg">-</div><div class="k">体重（7日平均）</div></div>
+      <div class="stat" id="sLeft"><div class="v num" id="vLeft">-</div><div class="k">62.9kgまで</div></div>
+      <div class="stat" id="sWaist"><div class="v num" id="vWaist">-</div><div class="k" id="kWaist">お腹まわり</div></div>
+    </div>
+  </section>
 
   <section>
     <h2>この7日間</h2>
@@ -173,13 +187,14 @@ body{margin:0;-webkit-text-size-adjust:100%}
       <div class="toast" id="dataToast"></div>
     </div>
   </details>
-  <div class="ver">v2 ・ 2026-11-11</div>
+  <div class="ver">v3 ・ 2026-11-12</div>
 </div>
 
 <script>
 (function(){
   const KEY = 'asa-kiroku-v1';
   const GRAM_PER_DRINK = 10; // 30ml × 40% × 0.8
+  const GOAL = 62.9;
   const $ = id => document.getElementById(id);
   const pad = n => String(n).padStart(2,'0');
   const iso = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -215,13 +230,13 @@ body{margin:0;-webkit-text-size-adjust:100%}
     const e = data[cur];
     if(e){
       $('w').value = e.w ?? '';
-      runKm = e.km ?? null; drinks = e.d ?? null;
+      runKm = e.km ?? null; drinks = e.d ?? null; $('waist').value = e.waist ?? '';
       $('km').value = runKm ? runKm : '';
       $('save').textContent = 'この日の記録を直す';
     } else {
       const lw = latestWeightBefore(cur);
       $('w').value = lw ?? '';
-      runKm = null; drinks = null; $('km').value = '';
+      runKm = null; drinks = null; $('km').value = ''; $('waist').value = '';
       $('save').textContent = '記録する';
     }
     setChips();
@@ -245,6 +260,10 @@ body{margin:0;-webkit-text-size-adjust:100%}
       if(b < a-0.2) out.push('体重がゆるやかに下がってきています。この調子で良いと思います。');
     }
     let st=0, k=s; while(data[k]){ st++; k=addDays(k,-1); }
+    if(e.waist){ const pw=Object.keys(data).filter(k=>k<s && data[k].waist).sort().pop();
+      if(pw && e.waist < data[pw].waist) out.push('お腹まわりが前回より'+(Math.round((data[pw].waist-e.waist)*10)/10)+'cm細くなりました。お酒を減らした分が、ちゃんとお腹に出ています。');
+      else if(pw) out.push('お腹まわりは記録できました。お腹は体重より遅れて変わるので、月単位で見ていきましょう。');
+      else out.push('お腹まわりの最初の記録です。ここからの変化を見ていきましょう。'); }
     if(st>=3) out.push('記録は'+st+'日続いています。');
     return out;
   }
@@ -265,6 +284,15 @@ body{margin:0;-webkit-text-size-adjust:100%}
     const dry = dRec.filter(e=>e.d===0).length;
     const km = rec.reduce((s,e)=>s+(e.km||0),0);
     $('vDry').innerHTML = rec.length ? dry+'<small>日</small>' : '-';
+    const ws = rec.filter(e=>e.w).map(e=>e.w);
+    if(ws.length){ const a=avg(ws); $('vAvg').innerHTML=a.toFixed(1)+'<small>kg</small>'; const left=Math.max(0,a-GOAL);
+      $('vLeft').innerHTML = left>0 ? (Math.round(left*10)/10).toFixed(1)+'<small>kg</small>' : '達成'; $('sLeft').className='stat'+(left===0?' good':''); }
+    else { $('vAvg').textContent='-'; $('vLeft').textContent='-'; }
+    const wk=Object.keys(data).filter(k=>data[k].waist).sort();
+    if(wk.length){ const lastW=data[wk[wk.length-1]].waist, firstW=data[wk[0]].waist, diff=Math.round((lastW-firstW)*10)/10;
+      $('vWaist').innerHTML=lastW+'<small>cm</small>'; $('kWaist').textContent = wk.length>1 ? 'お腹まわり（はじめから '+(diff>0?'+':'')+diff+'cm）' : 'お腹まわり';
+      $('sWaist').className='stat'+(wk.length>1 && diff<0?' good':''); }
+    else { $('vWaist').textContent='-'; $('kWaist').textContent='お腹まわり（週1回）'; }
     $('vKm').innerHTML = rec.length ? (Math.round(km*10)/10)+'<small>km</small>' : '-';
     let g = null;
     if(dRec.length){ g = Math.round(dRec.reduce((s,e)=>s+Math.min(e.d,4)*GRAM_PER_DRINK,0)/dRec.length); }
@@ -280,7 +308,7 @@ body{margin:0;-webkit-text-size-adjust:100%}
     if(pts.length<2){ box.innerHTML='<div class="empty">2日分記録すると、ここに体重の線が出ます。</div>'; return; }
     const W=440,H=180,L=36,R=12,T=14,B=26;
     let lo=Math.min(...pts.map(p=>p.w)), hi=Math.max(...pts.map(p=>p.w));
-    lo=Math.floor(lo-0.5); hi=Math.ceil(hi+0.5); if(hi-lo<2) hi=lo+2;
+    lo=Math.min(lo,GOAL); lo=Math.floor(lo-0.5); hi=Math.ceil(hi+0.5); if(hi-lo<2) hi=lo+2;
     const x=i=>L+(W-L-R)*i/29, y=w=>T+(H-T-B)*(hi-w)/(hi-lo);
     const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
     const fg=css('--muted'), line=css('--line'), ac=css('--accent'), ink=css('--fg');
@@ -289,6 +317,8 @@ body{margin:0;-webkit-text-size-adjust:100%}
     ticks.forEach(t=>{ s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(t)+'" y2="'+y(t)+'" stroke="'+line+'" stroke-width="1"/>';
       s+='<text x="'+(L-6)+'" y="'+(y(t)+4)+'" text-anchor="end" font-size="11" fill="'+fg+'" font-family="Inter,sans-serif">'+t.toFixed(1)+'</text>'; });
     [0,14,29].forEach(i=>{ const d=parse(days[i]); s+='<text x="'+x(i)+'" y="'+(H-6)+'" text-anchor="'+(i===0?'start':i===29?'end':'middle')+'" font-size="11" fill="'+fg+'" font-family="Inter,sans-serif">'+(d.getMonth()+1)+'/'+d.getDate()+'</text>'; });
+    s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(GOAL)+'" y2="'+y(GOAL)+'" stroke="'+ac+'" stroke-width="1.5" stroke-dasharray="4 4"/>';
+    s+='<text x="'+(L+4)+'" y="'+(y(GOAL)-5)+'" font-size="11" fill="'+css('--accent-ink')+'" font-family="Inter,sans-serif">目標 62.9</text>';
     const path=pts.map((p,j)=>(j?'L':'M')+x(p.i).toFixed(1)+' '+y(p.w).toFixed(1)).join(' ');
     const area=path+' L'+x(pts[pts.length-1].i).toFixed(1)+' '+(H-B)+' L'+x(pts[0].i).toFixed(1)+' '+(H-B)+' Z';
     s+='<path d="'+area+'" fill="'+ac+'" fill-opacity="0.12" stroke="none"/>';
@@ -305,10 +335,10 @@ body{margin:0;-webkit-text-size-adjust:100%}
     const keys=Object.keys(data).sort().reverse().slice(0,21);
     const box=$('hist');
     if(!keys.length){ box.innerHTML='<div class="empty">まだ記録がありません。上から今日の分を入れてみてください。</div>'; return; }
-    let h='<table><thead><tr><th>日付</th><th>体重</th><th>ラン</th><th>昨夜のお酒</th></tr></thead><tbody>';
+    let h='<table><thead><tr><th>日付</th><th>体重</th><th>ラン</th><th>昨夜のお酒</th><th>お腹</th></tr></thead><tbody>';
     keys.forEach(k=>{ const e=data[k];
       h+='<tr class="rowbtn" data-k="'+k+'"><td>'+label(k)+'</td><td>'+(e.w?e.w.toFixed(1):'-')+'</td><td>'+(e.km==null?'-':e.km===0?'休み':e.km+'km')+'</td>'+
-        '<td class="'+(e.d===0?'zero':'')+'">'+(e.d==null?'-':e.d===0?'休肝日':(e.d>=4?'4杯〜':e.d+'杯'))+'</td></tr>'; });
+        '<td class="'+(e.d===0?'zero':'')+'">'+(e.d==null?'-':e.d===0?'休肝日':(e.d>=4?'4杯〜':e.d+'杯'))+'</td><td>'+(e.waist?e.waist:'')+'</td></tr>'; });
     h+='</tbody></table>';
     box.innerHTML=h;
     box.querySelectorAll('tr.rowbtn').forEach(tr=>tr.addEventListener('click',()=>{ cur=tr.dataset.k; loadForm(); renderMsg(cur); window.scrollTo({top:0,behavior:'smooth'}); }));
@@ -332,6 +362,7 @@ body{margin:0;-webkit-text-size-adjust:100%}
     const e={};
     if(!isNaN(w)) e.w=Math.round(w*10)/10;
     if(runKm!==null) e.km=runKm;
+    const wv=parseFloat($('waist').value); if(!isNaN(wv)) e.waist=Math.round(wv*10)/10;
     if(drinks!==null) e.d=drinks;
     if(!Object.keys(e).length){ $('msg').innerHTML='<p>体重・ラン・お酒のどれかを入れてから押してください。</p>'; return; }
     data[cur]=e;
